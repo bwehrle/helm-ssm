@@ -49,7 +49,12 @@ func ExecuteTemplate(sourceFilePath string, funcMap template.FuncMap, verbose bo
 }
 
 // GetFuncMap builds the relevant function map to helm_ssm
-func GetFuncMap(profile string, prefix string, clean bool, tagCleaned string, endpoint string) template.FuncMap {
+func GetFuncMap(profile string,
+	prefix string,
+	clean bool,
+	tagCleaned string,
+	endpoint string,
+	version string) template.FuncMap {
 
 	cleanFunc := func(...interface{}) (string, error) {
 		return tagCleaned, nil
@@ -80,7 +85,7 @@ func GetFuncMap(profile string, prefix string, clean bool, tagCleaned string, en
 				options = append(options, fmt.Sprintf("prefix=%s", prefix))
 			}
 
-			optStr, err := resolveSSMParameter(awsSession, ssmPath, options)
+			optStr, err := resolveSSMParameter(awsSession, ssmPath, version, options)
 			str := ""
 			if optStr != nil {
 				str = *optStr
@@ -91,7 +96,7 @@ func GetFuncMap(profile string, prefix string, clean bool, tagCleaned string, en
 	return funcMap
 }
 
-func resolveSSMParameter(session *session.Session, ssmPath string, options []string) (*string, error) {
+func resolveSSMParameter(session *session.Session, ssmPath string, version string, options []string) (*string, error) {
 	opts, err := handleOptions(options)
 	if err != nil {
 		return nil, err
@@ -100,6 +105,10 @@ func resolveSSMParameter(session *session.Session, ssmPath string, options []str
 	var defaultValue *string
 	if optDefaultValue, exists := opts["default"]; exists {
 		defaultValue = &optDefaultValue
+	}
+
+	if len(version) >0 {
+		ssmPath = strings.Replace(ssmPath, "$version", version, 1)
 	}
 
 	var svc ssmiface.SSMAPI
@@ -117,13 +126,12 @@ func handleOptions(options []string) (map[string]string, error) {
 		"required",
 		"prefix",
 		"region",
-		"endpoint",
 	}
 	opts := map[string]string{}
 	for _, o := range options {
 		split := strings.Split(o, "=")
 		if len(split) != 2 {
-			return nil, fmt.Errorf("Invalid option: %s. Valid options: %s", o, validOptions)
+			return nil, fmt.Errorf("invalid option: %s. valid options: %s", o, validOptions)
 		}
 		opts[split[0]] = split[1]
 	}
