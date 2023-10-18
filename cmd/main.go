@@ -18,6 +18,7 @@ var dryRun bool
 var clean bool
 var tagCleaned string
 var prefix string
+var endpoint string
 
 type valueFilesList []string
 
@@ -52,7 +53,7 @@ func main() {
 	f.BoolVarP(&clean, "clean", "c", false, "clean all template commands from file")
 	f.StringVarP(&tagCleaned, "tag-cleaned", "t", "", "replace cleaned template commands with given string")
 	f.StringVarP(&prefix, "prefix", "P", "", "prefix for all parameters without affecting the path. ignored if individual prefix is defined")
-
+	f.StringVarP(&endpoint, "endpoint", "E", "", "AWS service endpoint (defaults to SDK-defined endpoint)")
 	cmd.MarkFlagRequired("values")
 
 	if err := cmd.Execute(); err != nil {
@@ -62,7 +63,7 @@ func main() {
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	funcMap := hssm.GetFuncMap(profile, prefix, clean, tagCleaned)
+	funcMap := hssm.GetFuncMap(profile, prefix, clean, tagCleaned, endpoint)
 	for _, filePath := range valueFiles {
 		content, err := hssm.ExecuteTemplate(filePath, funcMap, verbose)
 		if err != nil {

@@ -49,7 +49,7 @@ func ExecuteTemplate(sourceFilePath string, funcMap template.FuncMap, verbose bo
 }
 
 // GetFuncMap builds the relevant function map to helm_ssm
-func GetFuncMap(profile string, prefix string, clean bool, tagCleaned string) template.FuncMap {
+func GetFuncMap(profile string, prefix string, clean bool, tagCleaned string, endpoint string) template.FuncMap {
 
 	cleanFunc := func(...interface{}) (string, error) {
 		return tagCleaned, nil
@@ -64,7 +64,7 @@ func GetFuncMap(profile string, prefix string, clean bool, tagCleaned string) te
 		}
 	}
 
-	awsSession := newAWSSession(profile)
+	awsSession := newAWSSession(profile, endpoint)
 	if clean {
 		funcMap["ssm"] = cleanFunc
 	} else {
@@ -117,6 +117,7 @@ func handleOptions(options []string) (map[string]string, error) {
 		"required",
 		"prefix",
 		"region",
+		"endpoint",
 	}
 	opts := map[string]string{}
 	for _, o := range options {
@@ -135,11 +136,21 @@ func handleOptions(options []string) (map[string]string, error) {
 	return opts, nil
 }
 
-func newAWSSession(profile string) *session.Session {
+func newAWSSession(profile string, endpoint string) *session.Session {
 	// Specify profile for config and region for requests
-	session := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-		Profile:           profile,
-	}))
-	return session
+
+	if len(endpoint) > 0 {
+		return session.Must(session.NewSessionWithOptions(session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+			Profile:           profile,
+			Config: aws.Config{
+				Endpoint: aws.String("http://localhost:4566"),
+			},
+		}))
+	} else {
+		return session.Must(session.NewSessionWithOptions(session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+			Profile:           profile,
+		}))
+	}
 }
